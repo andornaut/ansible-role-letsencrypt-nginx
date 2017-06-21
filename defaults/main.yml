@@ -1,0 +1,8 @@
+---
+acme_directory: https://acme-staging.api.letsencrypt.org/directory
+account_key_path: /etc/letsencrypt-ansible/account-key.pem
+crt_directory: /etc/letsencrypt-ansible/crt
+csr_directory: /etc/letsencrypt-ansible/csr
+private_key_path: /etc/letsencrypt-ansible/private-key.pem
+web_root_directory: /var/www
+websites: []
