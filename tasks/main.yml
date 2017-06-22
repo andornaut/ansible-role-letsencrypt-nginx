@@ -42,7 +42,7 @@
   with_items: "{{ websites }}"
   become: true
 
-- name: Letsencrypt challenge
+- name: Initiate Letsencrypt challenge
   letsencrypt:
     account_email: "{{ account_email }}"
     account_key: "{{ account_key_path }}"
@@ -70,7 +70,7 @@
   with_items: "{{ letsencrypt_challenge.results }}"
   become: true
 
-- name: Issue certificates
+- name: Complete Letsencrypt challenge
   letsencrypt:
     account_email: "{{ account_email }}"
     account_key: "{{ account_key_path }}"
