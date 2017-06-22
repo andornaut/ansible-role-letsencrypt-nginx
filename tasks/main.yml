@@ -32,6 +32,12 @@
   when: create_keys|changed
   become: true
 
+- name: Create CSR directory
+  file:
+    path: "{{ csr_directory }}"
+    state: directory
+  become: true
+
 - name: Create CSRs
   openssl_csr:
     path: "{{ csr_directory }}/{{ item.domain }}.csr"
