@@ -72,7 +72,7 @@
 
 - name: Issue certificates
   letsencrypt:
-    account_email: "{{ email }}"
+    account_email: "{{ account_email }}"
     account_key: "{{ account_key_path }}"
     acme_directory: "{{ acme_directory }}"
     csr: "{{ csr_directory }}/{{ item.item.domain }}.csr"
