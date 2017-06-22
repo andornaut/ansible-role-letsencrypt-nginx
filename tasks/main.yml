@@ -50,7 +50,6 @@
     csr: "{{ csr_directory }}/{{ item.domain }}.csr"
     dest: "{{ crt_directory }}/{{ item.domain }}.crt"
   register: letsencrypt_challenge
-  when: create_csrs|changed
   with_items: "{{ websites }}"
   become: true
 
