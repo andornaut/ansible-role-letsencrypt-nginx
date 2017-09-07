@@ -55,6 +55,7 @@
     acme_directory: "{{ acme_directory }}"
     csr: "{{ csr_directory }}/{{ item.domain }}.csr"
     dest: "{{ crt_directory }}/{{ item.domain }}.crt"
+    remaining_days: "{{ remaining_days }}"
   register: letsencrypt_challenge
   with_items: "{{ websites }}"
   become: true
@@ -83,6 +84,7 @@
     csr: "{{ csr_directory }}/{{ item.item.domain }}.csr"
     dest: "{{ crt_directory }}/{{ item.item.domain }}.crt"
     data: "{{ item }}"
+    remaining_days: "{{ remaining_days }}"
   register: issue_certificates
   when: item.changed
   with_items: "{{ letsencrypt_challenge.results }}"
