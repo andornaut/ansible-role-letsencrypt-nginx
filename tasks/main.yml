@@ -58,7 +58,7 @@
     dest: "{{ crt_directory }}/{{ item.domain }}.crt"
     remaining_days: "{{ remaining_days }}"
   register: letsencrypt_challenge
-  when: not item | skipped
+  when: item.use_snakeoil_certificate is not defined or not item.use_snakeoil_certificate
   with_items: "{{ websites }}"
   become: true
 
