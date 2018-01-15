@@ -46,6 +46,7 @@
     commonName: "{{ item.domain }}"
   register: create_csrs
   with_items: "{{ websites }}"
+  when: item.item.use_snakeoil_certificate is not defined or not item.item.use_snakeoil_certificate
   become: true
 
 - name: Initiate Letsencrypt challenge
@@ -58,6 +59,7 @@
     remaining_days: "{{ remaining_days }}"
   register: letsencrypt_challenge
   with_items: "{{ websites }}"
+  when: not item | skipped
   become: true
 
 - name: Create challenge resource directories
@@ -66,6 +68,7 @@
     state: directory
   when: item.changed
   with_items: "{{ letsencrypt_challenge.results }}"
+  when: not item | skipped
   become: true
 
 - name: Copy challenge resources
@@ -74,6 +77,7 @@
     content: "{{ item['challenge_data'][ item.item.domain ]['http-01']['resource_value'] }}"
   when: item.changed
   with_items: "{{ letsencrypt_challenge.results }}"
+  when: not item | skipped
   become: true
 
 - name: Complete Letsencrypt challenge
@@ -86,6 +90,8 @@
     data: "{{ item }}"
     remaining_days: "{{ remaining_days }}"
   register: issue_certificates
-  when: item.changed
+  when:
+    - item.changed
+    - not item | skipped
   with_items: "{{ letsencrypt_challenge.results }}"
   become: true
