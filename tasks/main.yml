@@ -29,7 +29,7 @@
   file:
     path: "{{ csr_directory }}"
     state: absent
-  when: create_keys|changed
+  when: create_keys is changed
   become: true
 
 - name: Create CSR directory
