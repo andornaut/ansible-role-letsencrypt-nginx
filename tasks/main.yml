@@ -68,7 +68,7 @@
     state: directory
   when:
     - item.changed
-    - not item | skipped
+    - item is not skipped
   with_items: "{{ letsencrypt_challenge.results }}"
   become: true
 
@@ -78,7 +78,7 @@
     content: "{{ item['challenge_data'][ item.item.domain ]['http-01']['resource_value'] }}"
   when:
     - item.changed
-    - not item | skipped
+    - item is not skipped
   with_items: "{{ letsencrypt_challenge.results }}"
   become: true
 
@@ -94,6 +94,6 @@
   register: issue_certificates
   when:
     - item.changed
-    - not item | skipped
+    - item is not skipped
   with_items: "{{ letsencrypt_challenge.results }}"
   become: true
