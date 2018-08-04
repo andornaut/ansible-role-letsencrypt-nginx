@@ -1,0 +1,27 @@
+location ~ [^/]\.html(/|$) {
+    # https://www.nginx.com/resources/wiki/start/topics/examples/phpfcgi/
+    fastcgi_split_path_info ^(.+?\.html)(/.*)$;
+    if (!-f $document_root$fastcgi_script_name) {
+        return 404;
+    }
+    # Mitigate https://httpoxy.org/ vulnerabilities
+    fastcgi_param HTTP_PROXY "";
+
+	fastcgi_intercept_errors on;
+	fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
+	include snippets/fastcgi-php.conf;
+}
+
+location ~ [^/]\.php(/|$) {
+    # https://www.nginx.com/resources/wiki/start/topics/examples/phpfcgi/
+    fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+    if (!-f $document_root$fastcgi_script_name) {
+        return 404;
+    }
+    # Mitigate https://httpoxy.org/ vulnerabilities
+    fastcgi_param HTTP_PROXY "";
+
+	fastcgi_intercept_errors on;
+	fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
+	include snippets/fastcgi-php.conf;
+}

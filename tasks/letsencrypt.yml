@@ -1,0 +1,99 @@
+---
+- name: Install python-openssl system package
+  apt:
+    name: python-openssl
+    state: latest
+    update_cache: yes
+  become: true
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ letsencryptnginx_private_key_path|dirname }}"
+    - "{{ letsencryptnginx_crt_directory }}"
+    - "{{ letsencryptnginx_csr_directory }}"
+  become: true
+
+- name: Create account key and private key
+  openssl_privatekey:
+    path: "{{ item }}"
+  register: create_keys
+  with_items:
+    - "{{ letsencryptnginx_account_key_path }}"
+    - "{{ letsencryptnginx_private_key_path }}"
+  become: true
+
+- name: Delete CSRs if keys have changed
+  file:
+    path: "{{ letsencryptnginx_csr_directory }}"
+    state: absent
+  when: create_keys is changed
+  become: true
+
+- name: Create CSR directory
+  file:
+    path: "{{ letsencryptnginx_csr_directory }}"
+    state: directory
+  become: true
+
+- name: Create CSRs
+  openssl_csr:
+    path: "{{ letsencryptnginx_csr_directory }}/{{ item.domain }}.csr"
+    privatekey_path: "{{ letsencryptnginx_private_key_path }}"
+    countryName: CA
+    commonName: "{{ item.domain }}"
+  register: create_csrs
+  when: item.use_snakeoil_certificate is not defined or not item.use_snakeoil_certificate
+  with_items: "{{ letsencryptnginx_websites }}"
+  become: true
+
+- name: Initiate Letsencrypt challenge
+  letsencrypt:
+    letsencryptnginx_account_email: "{{ letsencryptnginx_account_email }}"
+    account_key: "{{ letsencryptnginx_account_key_path }}"
+    letsencryptnginx_acme_directory_url: "{{ letsencryptnginx_acme_directory_url }}"
+    csr: "{{ letsencryptnginx_csr_directory }}/{{ item.domain }}.csr"
+    dest: "{{ letsencryptnginx_crt_directory }}/{{ item.domain }}.crt"
+    letsencryptnginx_remaining_days: "{{ letsencryptnginx_remaining_days }}"
+  register: letsencrypt_challenge
+  when: item.use_snakeoil_certificate is not defined or not item.use_snakeoil_certificate
+  with_items: "{{ letsencryptnginx_websites }}"
+  become: true
+
+- name: Create challenge resource directories
+  file:
+    path: "{{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}/{{ item['challenge_data'][ item.item.domain ]['http-01']['resource']|dirname }}"
+    state: directory
+  when:
+    - item.changed
+    - not item | skipped
+  with_items: "{{ letsencrypt_challenge.results }}"
+  become: true
+
+- name: Copy challenge resources
+  copy:
+    dest: "{{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}/{{ item['challenge_data'][ item.item.domain ]['http-01']['resource'] }}"
+    content: "{{ item['challenge_data'][ item.item.domain ]['http-01']['resource_value'] }}"
+  when:
+    - item.changed
+    - not item | skipped
+  with_items: "{{ letsencrypt_challenge.results }}"
+  become: true
+
+- name: Complete Letsencrypt challenge
+  letsencrypt:
+    letsencryptnginx_account_email: "{{ letsencryptnginx_account_email }}"
+    account_key: "{{ letsencryptnginx_account_key_path }}"
+    letsencryptnginx_acme_directory_url: "{{ letsencryptnginx_acme_directory_url }}"
+    csr: "{{ letsencryptnginx_csr_directory }}/{{ item.item.domain }}.csr"
+    dest: "{{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt"
+    data: "{{ item }}"
+    letsencryptnginx_remaining_days: "{{ letsencryptnginx_remaining_days }}"
+  register: issue_certificates
+  when:
+    - item.changed
+    - not item | skipped
+  with_items: "{{ letsencrypt_challenge.results }}"
+  become: true

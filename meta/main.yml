@@ -1,13 +1,14 @@
 ---
 galaxy_info:
   author: andornaut
-  description: Register and renew HTTPS certificates using Let's Encrypt on Ubuntu
+  description: Install Nginx on Ubuntu and manage auto-renewal of HTTPS certificates using Let's Encrypt
   license: MIT
   min_ansible_version: 2.4
   galaxy_tags:
     - encryption
     - https
     - letsencrypt
+    - nginx
     - ssl
     - tls
     - web

@@ -1,0 +1,88 @@
+server {
+    listen 80;
+    server_name {{ item.item.domain }} www.{{ item.item.domain }};
+    access_log off;
+    error_log off;
+    log_not_found off;
+
+    location / {
+{% if item.stat.exists or (item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate) %}
+        rewrite ^/(.*) https://{{ item.item.domain }}/$1 permanent;
+{% else %}
+        return 404;
+{% endif %}
+    }
+
+    location /.well-known {
+        root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }};
+        access_log on;
+        error_log on;
+        log_not_found on;
+        allow all; # Override ../snippets/common_site_configuration
+    }
+}
+
+{% if item.stat.exists or (item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate) %}
+server {
+    listen 443 ssl;
+    server_name www.{{ item.item.domain }};
+    rewrite ^/(.*) https://{{ item.item.domain }}/$1 permanent;
+    access_log off;
+    error_log off;
+
+    {% if item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate %}
+        include snippets/snakeoil.conf;
+    {% else %}
+        ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt;
+        ssl_certificate_key {{ letsencryptnginx_private_key_path }};
+    {% endif %}
+}
+
+server {
+    listen 443 ssl;
+    server_name {{ item.item.domain }};
+
+{% if item.item.http_basic_authentication is defined %}
+    {% if item.item.http_basic_authentication.allowed_networks is defined and item.item.http_basic_authentication.allowed_networks %}
+    satisfy  any;
+    {% for allowed_network in item.item.http_basic_authentication.allowed_networks %}
+    allow {{ allowed_network }};
+    {% endfor %}
+    deny   all;
+    {% endif %}
+
+    auth_basic "Restricted Content";
+    auth_basic_user_file /etc/nginx/{{ item.item.domain }}.htpasswd;
+{% endif %}
+
+    location / {
+{% if item.item.proxy_port is defined %}
+        proxy_pass http://127.0.0.1:{{ item.item.proxy_port }};
+{% else %}
+        root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}{% if item.item.path is defined %}/{{ item.item.path }}{% endif %};
+        include snippets/php_configuration;
+    {% if item.item.default_path is defined and item.item.default_path %}
+        try_files $uri $uri/ {{ item.item.default_path }};
+    {% endif %}
+{% endif %}
+    }
+
+{% if item.item.aliases is defined and item.item.aliases %}
+{% for alias in item.item.aliases %}
+    location {{ alias.src }} {
+        alias {{ alias.dest }};
+        autoindex on;
+    }
+{% endfor %}
+{% endif %}
+
+    {% if item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate %}
+        include snippets/snakeoil.conf;
+    {% else %}
+        ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt;
+        ssl_certificate_key {{ letsencryptnginx_private_key_path }};
+    {% endif %}
+
+    include snippets/common_site_configuration;
+}
+{% endif %}

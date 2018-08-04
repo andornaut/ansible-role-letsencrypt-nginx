@@ -1,0 +1,146 @@
+---
+- name: Install system packages
+  apt:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+  with_items:
+    - nginx
+    - php-fpm
+    - python
+    - python-pip
+  become: true
+
+- name: Install Passlib Python package (requirement of `htpasswd` ansible module)
+  pip:
+    name: passlib
+    state: present
+  become: true
+
+- name: Create HTTP Basic Authentication accounts
+  htpasswd:
+    path: /etc/nginx/{{ item.0.domain }}.htpasswd
+    name: "{{ item.1.username }}"
+    password: "{{ item.1.password }}"
+    owner: root
+    group: www-data
+    mode: 0640
+  when: item.1 is defined
+  with_subelements:
+    - "{{ letsencryptnginx_websites }}"
+    - http_basic_authentication.credentials
+    - skip_missing: True
+  become: true
+
+- name: Create letsencryptnginx_web_root_directory
+  file:
+    path: "{{ letsencryptnginx_web_root_directory }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: 2775
+  become: true
+
+- name: Clone website repositories
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ letsencryptnginx_web_root_directory }}/{{ item.domain }}"
+    version: "{{ item.version|default('HEAD') }}"
+  when: item.repo is defined
+  with_items: "{{ letsencryptnginx_websites }}"
+  register: git_clone
+  become: true
+
+- name: Run website commands
+  shell: "{{ item.item.command }}"
+  args:
+    chdir: "{{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}"
+  when:
+    - item.changed and 'command' in item.item
+    - not item | skipped
+  with_items: "{{ git_clone.results }}"
+  become: true
+
+- name: Chown repo directrories
+  file:
+    path: "{{ letsencryptnginx_web_root_directory }}/{{ item.domain }}"
+    owner: www-data
+    group: www-data
+  when: item.repo is defined
+  with_items: "{{ letsencryptnginx_websites }}"
+  become: true
+
+- name: Create website web_root directories
+  file:
+    path: "{{ letsencryptnginx_web_root_directory }}/{{ item.domain }}"
+    owner: www-data
+    group: www-data
+    state: directory
+  when: item.repo is not defined and item.proxy_port is not defined
+  with_items: "{{ letsencryptnginx_websites }}"
+  become: true
+
+- name: Set cgi.fix_pathinfo
+  lineinfile:
+    dest: /etc/php/7.0/fpm/php.ini
+    regexp: '^(;?)(\s*)cgi.fix_pathinfo(\s*)='
+    line: cgi.fix_pathinfo=0
+  notify:
+    - restart php-fpm
+  become: true
+
+- name: Set security.limit_extensions
+  lineinfile:
+    dest: /etc/php/7.0/fpm/pool.d/www.conf
+    regexp: '^(;?)(\s*)security.limit_extensions(\s*)='
+    line: security.limit_extensions = .php, .html
+  notify:
+    - restart php-fpm
+  become: true
+
+- name: Delete sites-available and sites-enabled directories
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /etc/nginx/sites-available
+    - /etc/nginx/sites-enabled
+  become: true
+
+- name: Create sites-enabled directory
+  file:
+    path: /etc/nginx/sites-enabled
+    state: directory
+  become: true
+
+- name: Copy snippets
+  copy:
+    src: "{{ item }}"
+    dest: /etc/nginx/snippets/
+  notify: restart nginx
+  with_items:
+    - common_site_configuration
+    - php_configuration
+  become: true
+
+- name: Copy default site config
+  copy:
+    src: 00-default
+    dest: /etc/nginx/sites-enabled
+  notify: restart nginx
+  become: true
+
+- name: Check if HTTPS certificates are present
+  stat:
+    path: "{{ letsencryptnginx_crt_directory }}/{{ item.domain }}.crt"
+  register: certificates
+  with_items: "{{ letsencryptnginx_websites }}"
+  become: true
+
+- name: Copy site configs
+  template:
+    src: site.j2
+    dest: /etc/nginx/sites-enabled/{{ item.item.domain }}
+  notify: restart nginx
+  with_items: "{{ certificates.results }}"
+  become: true

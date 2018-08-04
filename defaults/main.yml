@@ -1,9 +1,9 @@
 ---
-account_key_path: /etc/letsencrypt-ansible/account-key.pem
-acme_directory: https://acme-staging.api.letsencrypt.org/directory
-crt_directory: /etc/letsencrypt-ansible/crt
-csr_directory: /etc/letsencrypt-ansible/csr
-private_key_path: /etc/letsencrypt-ansible/private-key.pem
-remaining_days: 30
-web_root_directory: /var/www
-websites: []
+letsencryptnginx_account_key_path: /etc/letsencrypt-ansible/account-key.pem
+letsencryptnginx_acme_directory_url: https://acme-staging.api.letsencrypt.org/directory
+letsencryptnginx_crt_directory: /etc/letsencrypt-ansible/crt
+letsencryptnginx_csr_directory: /etc/letsencrypt-ansible/csr
+letsencryptnginx_private_key_path: /etc/letsencrypt-ansible/private-key.pem
+letsencryptnginx_remaining_days: 30
+letsencryptnginx_web_root_directory: /var/www
+letsencryptnginx_websites: []
