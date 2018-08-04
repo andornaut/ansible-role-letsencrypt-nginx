@@ -57,7 +57,7 @@
     chdir: "{{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}"
   when:
     - item.changed and 'command' in item.item
-    - not item | skipped
+    - item is not skipped
   with_items: "{{ git_clone.results }}"
   become: true
 
