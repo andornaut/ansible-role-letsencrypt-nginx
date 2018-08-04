@@ -56,7 +56,7 @@
     acme_directory: "{{ letsencryptnginx_acme_directory_url }}"
     csr: "{{ letsencryptnginx_csr_directory }}/{{ item.domain }}.csr"
     dest: "{{ letsencryptnginx_crt_directory }}/{{ item.domain }}.crt"
-    remaining_days: "{{ remaining_days }}"
+    remaining_days: "{{ letsencryptnginx_remaining_days }}"
   register: letsencrypt_challenge
   when: item.use_snakeoil_certificate is not defined or not item.use_snakeoil_certificate
   with_items: "{{ letsencryptnginx_websites }}"
