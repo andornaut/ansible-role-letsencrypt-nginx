@@ -4,6 +4,10 @@ An [Ansible](https://www.ansible.com/) role that provisions [NGINX HTTP server](
 on Ubuntu and manages auto-renewal of HTTPS certificates using
 [Let's Encrypt](https://letsencrypt.org/).
 
+## Requirements
+
+* [Ansible](https://www.ansible.com/) >= 2.6.0
+
 ## Variables
 
 See [default values](./defaults/main.yml).

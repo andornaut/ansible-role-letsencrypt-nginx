@@ -50,7 +50,7 @@
   become: true
 
 - name: Initiate Letsencrypt challenge
-  letsencrypt:
+  acme_certificate:
     account_email: "{{ letsencryptnginx_account_email }}"
     account_key: "{{ letsencryptnginx_account_key_path }}"
     acme_directory: "{{ letsencryptnginx_acme_directory_url }}"
@@ -83,7 +83,7 @@
   become: true
 
 - name: Complete Letsencrypt challenge
-  letsencrypt:
+  acme_certificate:
     account_email: "{{ letsencryptnginx_account_email }}"
     account_key: "{{ letsencryptnginx_account_key_path }}"
     acme_directory: "{{ letsencryptnginx_acme_directory_url }}"
