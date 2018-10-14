@@ -44,15 +44,28 @@ server {
 
 {% if item.item.http_basic_authentication is defined %}
     {% if item.item.http_basic_authentication.allowed_networks is defined and item.item.http_basic_authentication.allowed_networks %}
-    satisfy  any;
-    {% for allowed_network in item.item.http_basic_authentication.allowed_networks %}
-    allow {{ allowed_network }};
-    {% endfor %}
-    deny   all;
+        satisfy  any;
+        {% for allowed_network in item.item.http_basic_authentication.allowed_networks %}
+            allow {{ allowed_network }};
+        {% endfor %}
+        deny   all;
     {% endif %}
 
     auth_basic "Restricted Content";
     auth_basic_user_file /etc/nginx/{{ item.item.domain }}.htpasswd;
+
+    add_header Access-Control-Allow-Credentials true;
+    add_header Access-Control-Allow-Origin $http_origin;
+    add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS;
+    add_header Access-Control-Allow-Headers authorization,chrome-proxy,range;
+
+    if ($request_method = 'OPTIONS') {
+        add_header Access-Control-Allow-Credentials true always;
+        add_header Access-Control-Allow-Origin $http_origin always;
+        add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS;
+        add_header Access-Control-Allow-Headers authorization,chrome-proxy,range;
+        return 204;
+    }
 {% endif %}
 
     location / {
