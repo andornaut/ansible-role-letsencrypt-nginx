@@ -54,18 +54,10 @@ server {
     auth_basic "Restricted Content";
     auth_basic_user_file /etc/nginx/{{ item.item.domain }}.htpasswd;
 
-    add_header Access-Control-Allow-Credentials true;
-    add_header Access-Control-Allow-Origin $http_origin;
-    add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS;
-    add_header Access-Control-Allow-Headers authorization,chrome-proxy,range;
-
-    if ($request_method = 'OPTIONS') {
-        add_header Access-Control-Allow-Credentials true always;
-        add_header Access-Control-Allow-Origin $http_origin always;
-        add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS;
-        add_header Access-Control-Allow-Headers authorization,chrome-proxy,range;
-        return 204;
-    }
+    add_header Access-Control-Allow-Credentials true always;
+    add_header Access-Control-Allow-Origin $http_origin always;
+    add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
+    add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
 {% endif %}
 
     location / {
@@ -78,6 +70,14 @@ server {
         try_files $uri $uri/ {{ item.item.default_path }};
     {% endif %}
 {% endif %}
+
+        if ($request_method = 'OPTIONS') {
+            add_header Access-Control-Allow-Credentials true always;
+            add_header Access-Control-Allow-Origin $http_origin always;
+            add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
+            add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
+            return 204;
+        }
     }
 
 {% if item.item.aliases is defined and item.item.aliases %}
@@ -85,6 +85,14 @@ server {
     location {{ alias.src }} {
         alias {{ alias.dest }};
         autoindex on;
+
+        if ($request_method = 'OPTIONS') {
+            add_header Access-Control-Allow-Credentials true always;
+            add_header Access-Control-Allow-Origin $http_origin always;
+            add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
+            add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
+            return 204;
+        }
     }
 {% endfor %}
 {% endif %}
