@@ -65,6 +65,7 @@ server {
         include /etc/nginx/proxy_params;
         proxy_redirect ~*^http(.*)$ https$1;
         proxy_pass http://127.0.0.1:{{ item.item.proxy_port }};
+        proxy_set_header X-Forwarded-Port $server_port;
 {% else %}
         root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}{% if item.item.path is defined %}/{{ item.item.path }}{% endif %};
         include snippets/php_configuration;
