@@ -82,7 +82,7 @@
 
 - name: Set cgi.fix_pathinfo
   lineinfile:
-    dest: /etc/php/7.0/fpm/php.ini
+    dest: /etc/php/7.2/fpm/php.ini
     regexp: '^(;?)(\s*)cgi.fix_pathinfo(\s*)='
     line: cgi.fix_pathinfo=0
   notify:
@@ -91,7 +91,7 @@
 
 - name: Set security.limit_extensions
   lineinfile:
-    dest: /etc/php/7.0/fpm/pool.d/www.conf
+    dest: /etc/php/7.2/fpm/pool.d/www.conf
     regexp: '^(;?)(\s*)security.limit_extensions(\s*)='
     line: security.limit_extensions = .php, .html
   notify:
