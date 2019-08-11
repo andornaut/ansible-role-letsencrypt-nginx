@@ -121,6 +121,14 @@
   with_items:
     - common_site_configuration
     - php_configuration
+    - proxy_params
+  become: true
+
+- name: Overwrite proxy_params
+  copy:
+    src: proxy_params
+    dest: /etc/nginx/
+  notify: restart nginx
   become: true
 
 - name: Copy default site config
