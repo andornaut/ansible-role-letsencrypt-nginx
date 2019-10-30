@@ -6,7 +6,6 @@
     update_cache: yes
   with_items:
     - nginx
-    - php-fpm
     - python
     - python-pip
   become: true
@@ -80,24 +79,6 @@
   with_items: "{{ letsencryptnginx_websites }}"
   become: true
 
-- name: Set cgi.fix_pathinfo
-  lineinfile:
-    dest: /etc/php/7.2/fpm/php.ini
-    regexp: '^(;?)(\s*)cgi.fix_pathinfo(\s*)='
-    line: cgi.fix_pathinfo=0
-  notify:
-    - restart php-fpm
-  become: true
-
-- name: Set security.limit_extensions
-  lineinfile:
-    dest: /etc/php/7.2/fpm/pool.d/www.conf
-    regexp: '^(;?)(\s*)security.limit_extensions(\s*)='
-    line: security.limit_extensions = .php, .html
-  notify:
-    - restart php-fpm
-  become: true
-
 - name: Delete sites-available and sites-enabled directories
   file:
     path: "{{ item }}"
@@ -120,7 +101,6 @@
   notify: restart nginx
   with_items:
     - common_site_configuration
-    - php_configuration
     - proxy_params
   become: true
 

@@ -5,10 +5,3 @@
     daemon_reload: yes
     state: restarted
   become: true
-
-- name: restart php-fpm
-  systemd:
-    name: php7.2-fpm
-    daemon_reload: yes
-    state: restarted
-  become: true
