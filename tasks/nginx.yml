@@ -1,19 +1,11 @@
 ---
 - name: Install system packages
   apt:
-    name: "{{ item }}"
+    name:
+      - nginx
+      - python3-passlib
     state: latest
     update_cache: yes
-  with_items:
-    - nginx
-    - python
-    - python-pip
-  become: true
-
-- name: Install Passlib Python package (requirement of `htpasswd` ansible module)
-  pip:
-    name: passlib
-    state: present
   become: true
 
 - name: Create HTTP Basic Authentication accounts
@@ -28,6 +20,21 @@
   with_subelements:
     - "{{ letsencryptnginx_websites }}"
     - http_basic_authentication.credentials
+    - skip_missing: True
+  become: true
+
+- name: Create HTTP Basic Authentication accounts for aliases
+  htpasswd:
+    path: /etc/nginx/{{ item.0.password_filename }}
+    name: "{{ item.1.username }}"
+    password: "{{ item.1.password }}"
+    owner: root
+    group: www-data
+    mode: 0640
+  when: item.1 is defined
+  with_subelements:
+    - "{{ letsencryptnginx_websites | selectattr('aliases','defined') | map(attribute='aliases') | flatten | selectattr('http_basic_authentication','defined') | map(attribute='http_basic_authentication') | flatten }}"
+    - credentials
     - skip_missing: True
   become: true
 

@@ -42,6 +42,11 @@ server {
     listen 443 ssl;
     server_name {{ item.item.domain }};
 
+    add_header Access-Control-Allow-Credentials true always;
+    add_header Access-Control-Allow-Origin $http_origin always;
+    add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
+    add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
+
 {% if item.item.http_basic_authentication is defined %}
     {% if item.item.http_basic_authentication.allowed_networks is defined and item.item.http_basic_authentication.allowed_networks %}
         satisfy  any;
@@ -53,11 +58,6 @@ server {
 
     auth_basic "Restricted Content";
     auth_basic_user_file /etc/nginx/{{ item.item.domain }}.htpasswd;
-
-    add_header Access-Control-Allow-Credentials true always;
-    add_header Access-Control-Allow-Origin $http_origin always;
-    add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
-    add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
 {% endif %}
 
     location / {
@@ -94,6 +94,19 @@ server {
             add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
             return 204;
         }
+
+        {% if alias.http_basic_authentication is defined %}
+            {% if alias.http_basic_authentication.allowed_networks is defined and alias.http_basic_authentication.allowed_networks %}
+                satisfy  any;
+                {% for allowed_network in alias.http_basic_authentication.allowed_networks %}
+                    allow {{ allowed_network }};
+                {% endfor %}
+                deny   all;
+            {% endif %}
+
+            auth_basic "Restricted Content";
+            auth_basic_user_file /etc/nginx/{{ alias.http_basic_authentication.password_filename }};
+        {% endif %}
     }
 {% endfor %}
 {% endif %}
