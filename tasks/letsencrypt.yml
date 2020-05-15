@@ -90,7 +90,7 @@
     account_key: "{{ letsencryptnginx_account_key_path }}"
     acme_directory: "{{ letsencryptnginx_acme_directory_url }}"
     csr: "{{ letsencryptnginx_csr_directory }}/{{ item.item.domain }}.csr"
-    dest: "{{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt"
+    fullchain_dest: "{{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt"
     data: "{{ item }}"
     remaining_days: "{{ letsencryptnginx_remaining_days }}"
     acme_version: 2
