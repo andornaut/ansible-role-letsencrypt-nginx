@@ -1,130 +1,134 @@
 server {
-    listen 80;
-    server_name {{ item.item.domain }} www.{{ item.item.domain }};
-    access_log off;
-    error_log off;
-    log_not_found off;
+	listen 80;
+	server_name {{ item.item.domain }} www.{{ item.item.domain }};
+	access_log off;
+	error_log off;
+	log_not_found off;
 
-    location / {
+	location / {
 {% if item.stat.exists or (item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate) %}
-        rewrite ^/(.*) https://{{ item.item.domain }}/$1 permanent;
+		rewrite ^/(.*) https://{{ item.item.domain }}/$1 permanent;
 {% else %}
-        return 404;
+		return 404;
 {% endif %}
-    }
+	}
 
-    location /.well-known {
-        root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }};
-        access_log on;
-        error_log on;
-        log_not_found on;
-        allow all; # Override ../snippets/common_site_configuration
-    }
+	location /.well-known {
+		root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }};
+		access_log on;
+		error_log on;
+		log_not_found on;
+		allow all; # Override ../snippets/common_site_configuration
+	}
 }
 
 {% if item.stat.exists or (item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate) %}
 server {
-    listen 443 ssl;
-    server_name www.{{ item.item.domain }};
-    rewrite ^/(.*) https://{{ item.item.domain }}/$1 permanent;
-    access_log off;
-    error_log off;
+	listen 443 ssl;
+	server_name www.{{ item.item.domain }};
+	rewrite ^/(.*) https://{{ item.item.domain }}/$1 permanent;
+	access_log off;
+	error_log off;
 
-    {% if item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate %}
-        include snippets/snakeoil.conf;
-    {% else %}
-        ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt;
-        ssl_certificate_key {{ letsencryptnginx_private_key_path }};
-    {% endif %}
+	{% if item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate %}
+		include snippets/snakeoil.conf;
+	{% else %}
+		ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt;
+		ssl_certificate_key {{ letsencryptnginx_private_key_path }};
+	{% endif %}
 }
 
 server {
-    listen 443 ssl;
-    server_name {{ item.item.domain }};
+	listen 443 ssl;
+	server_name {{ item.item.domain }};
 
-    add_header Access-Control-Allow-Credentials true always;
-    add_header Access-Control-Allow-Origin $http_origin always;
-    add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
-    add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
+	add_header Access-Control-Allow-Credentials true always;
+	add_header Access-Control-Allow-Origin $http_origin always;
+	add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
+	add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
 
 {% if item.item.http_basic_authentication is defined %}
-    {% if item.item.http_basic_authentication.allowed_networks is defined and item.item.http_basic_authentication.allowed_networks %}
-        satisfy  any;
-        {% for allowed_network in item.item.http_basic_authentication.allowed_networks %}
-            allow {{ allowed_network }};
-        {% endfor %}
-        deny   all;
-    {% endif %}
+	{% if item.item.http_basic_authentication.allowed_networks is defined and item.item.http_basic_authentication.allowed_networks %}
+		satisfy  any;
+		{% for allowed_network in item.item.http_basic_authentication.allowed_networks %}
+			allow {{ allowed_network }};
+		{% endfor %}
+		deny   all;
+	{% endif %}
 
-    auth_basic "Restricted Content";
-    auth_basic_user_file /etc/nginx/{{ item.item.domain }}.htpasswd;
+	auth_basic "Restricted Content";
+	auth_basic_user_file /etc/nginx/{{ item.item.domain }}.htpasswd;
 {% endif %}
 
-    location / {
+	location / {
 {% if item.item.proxy_port is defined %}
-        include /etc/nginx/proxy_params;
-        proxy_redirect ~*^http([^s].*)$ https$1;
+		include /etc/nginx/proxy_params;
 
-        {% if item.item.remove_authorization_header is defined and item.item.remove_authorization_header %}
-            # The HTTP Basic Auth added by Nginx conflicts with Unifi.
-            # https://community.ui.com/questions/UniFi-5-9-29-behind-Apache-reverse-proxy-gives-400-bad-request-/432808a8-9f2d-489c-ba6f-c76d494bb702
-            proxy_set_header Authorization "";
+		{% if item.item.remove_authorization_header is defined and item.item.remove_authorization_header %}
+			# The HTTP Basic Auth added by Nginx conflicts with Unifi.
+			# https://community.ui.com/questions/UniFi-5-9-29-behind-Apache-reverse-proxy-gives-400-bad-request-/432808a8-9f2d-489c-ba6f-c76d494bb702
+			proxy_set_header Authorization "";
+		{% endif %}
+
+		{% if item.item.proxy_https is defined and item.item.proxy_https %}
+            proxy_redirect ~*^http([^s].*)$ https$1;
+			proxy_pass https://127.0.0.1:{{ item.item.proxy_port }};
+        {% else %}
+			proxy_pass http://127.0.0.1:{{ item.item.proxy_port }};
         {% endif %}
-
-        proxy_pass http://127.0.0.1:{{ item.item.proxy_port }};
 {% else %}
-        root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}{% if item.item.path is defined %}/{{ item.item.path }}{% endif %};
-    {% if item.item.default_path is defined and item.item.default_path %}
-        try_files $uri $uri/ {{ item.item.default_path }};
-    {% endif %}
+		root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}{% if item.item.path is defined %}/{{ item.item.path }}{% endif %};
+	{% if item.item.default_path is defined and item.item.default_path %}
+		try_files $uri $uri/ {{ item.item.default_path }};
+	{% endif %}
 {% endif %}
 
-        if ($request_method = 'OPTIONS') {
-            add_header Access-Control-Allow-Credentials true always;
-            add_header Access-Control-Allow-Origin $http_origin always;
-            add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
-            add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
-            return 204;
-        }
-    }
+		if ($request_method = 'OPTIONS') {
+			add_header Access-Control-Allow-Credentials true always;
+			add_header Access-Control-Allow-Origin $http_origin always;
+			add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
+			add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
+			return 204;
+		}
+	}
 
 {% if item.item.aliases is defined and item.item.aliases %}
 {% for alias in item.item.aliases %}
-    location {{ alias.src }} {
-        alias {{ alias.dest }};
-        autoindex on;
+	location {{ alias.src }} {
+		alias {{ alias.dest }};
+		autoindex on;
 
-        if ($request_method = 'OPTIONS') {
-            add_header Access-Control-Allow-Credentials true always;
-            add_header Access-Control-Allow-Origin $http_origin always;
-            add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
-            add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
-            return 204;
-        }
+		if ($request_method = 'OPTIONS') {
+			add_header Access-Control-Allow-Credentials true always;
+			add_header Access-Control-Allow-Origin $http_origin always;
+			add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
+			add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
+			return 204;
+		}
 
-        {% if alias.http_basic_authentication is defined %}
-            {% if alias.http_basic_authentication.allowed_networks is defined and alias.http_basic_authentication.allowed_networks %}
-                satisfy  any;
-                {% for allowed_network in alias.http_basic_authentication.allowed_networks %}
-                    allow {{ allowed_network }};
-                {% endfor %}
-                deny   all;
-            {% endif %}
+		{% if alias.http_basic_authentication is defined %}
+			{% if alias.http_basic_authentication.allowed_networks is defined and alias.http_basic_authentication.allowed_networks %}
+				satisfy  any;
+				{% for allowed_network in alias.http_basic_authentication.allowed_networks %}
+					allow {{ allowed_network }};
+				{% endfor %}
+				deny   all;
+			{% endif %}
 
-            auth_basic "Restricted Content";
-            auth_basic_user_file /etc/nginx/{{ alias.http_basic_authentication.password_filename }};
-        {% endif %}
-    }
+			auth_basic "Restricted Content";
+			auth_basic_user_file /etc/nginx/{{ alias.http_basic_authentication.password_filename }};
+		{% endif %}
+	}
 {% endfor %}
 {% endif %}
 
-    {% if item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate %}
-        include snippets/snakeoil.conf;
-    {% else %}
-        ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt;
-        ssl_certificate_key {{ letsencryptnginx_private_key_path }};
-    {% endif %}
+	{% if item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate %}
+		include snippets/snakeoil.conf;
+	{% else %}
+		ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt;
+		ssl_certificate_key {{ letsencryptnginx_private_key_path }};
+	{% endif %}
 
-    include snippets/common_site_configuration;
+	include snippets/common_site_configuration;
 }
 {% endif %}
