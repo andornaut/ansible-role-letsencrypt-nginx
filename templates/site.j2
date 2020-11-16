@@ -63,7 +63,14 @@ server {
     location / {
 {% if item.item.proxy_port is defined %}
         include /etc/nginx/proxy_params;
-        proxy_redirect ~*^http(.*)$ https$1;
+        proxy_redirect ~*^http([^s].*)$ https$1;
+
+        {% if item.item.remove_authorization_header is defined and item.item.remove_authorization_header %}
+            # The HTTP Basic Auth added by Nginx conflicts with Unifi.
+            # https://community.ui.com/questions/UniFi-5-9-29-behind-Apache-reverse-proxy-gives-400-bad-request-/432808a8-9f2d-489c-ba6f-c76d494bb702
+            proxy_set_header Authorization "";
+        {% endif %}
+
         proxy_pass http://127.0.0.1:{{ item.item.proxy_port }};
 {% else %}
         root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}{% if item.item.path is defined %}/{{ item.item.path }}{% endif %};
