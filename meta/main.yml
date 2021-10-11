@@ -3,7 +3,7 @@ galaxy_info:
   author: andornaut
   description: Install Nginx on Ubuntu and manage auto-renewal of HTTPS certificates using Let's Encrypt
   license: MIT
-  min_ansible_version: 2.8
+  min_ansible_version: 2.9
   galaxy_tags:
     - acme
     - encryption

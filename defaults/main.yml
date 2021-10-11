@@ -1,6 +1,6 @@
 ---
 letsencryptnginx_account_key_path: /etc/letsencrypt-ansible/account-key.pem
-letsencryptnginx_acme_directory_url: https://acme-staging.api.letsencrypt.org/directory
+letsencryptnginx_acme_directory_url: https://acme-staging-v02.api.letsencrypt.org/directory
 letsencryptnginx_crt_directory: /etc/letsencrypt-ansible/crt
 letsencryptnginx_csr_directory: /etc/letsencrypt-ansible/csr
 letsencryptnginx_private_key_path: /etc/letsencrypt-ansible/private-key.pem

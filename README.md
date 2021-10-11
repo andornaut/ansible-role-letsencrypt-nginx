@@ -6,7 +6,8 @@ on Ubuntu and manages auto-renewal of HTTPS certificates using
 
 ## Requirements
 
-* [Ansible](https://www.ansible.com/) >= 2.8.0
+* [Ansible](https://www.ansible.com/) >= 2.9.0
+* community.crypto collection: `ansible-galaxy collection install community.crypto`
 
 ## Variables
 

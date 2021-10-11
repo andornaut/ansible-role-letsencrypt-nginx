@@ -41,10 +41,6 @@ server {
 server {
     listen 443 ssl;
     server_name {{ item.item.domain }};
-#    add_header Access-Control-Allow-Credentials true always;
-#    add_header Access-Control-Allow-Origin $http_origin always;
-#    add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
-#    add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
 
 {% if item.item.http_basic_authentication is defined %}
     {% if item.item.http_basic_authentication.allowed_networks is defined and item.item.http_basic_authentication.allowed_networks %}
@@ -101,14 +97,6 @@ server {
     location {{ location.src }} {
         alias {{ location.dest }};
         autoindex on;
-
-#        if ($request_method = 'OPTIONS') {
-#            add_header Access-Control-Allow-Credentials true always;
-#            add_header Access-Control-Allow-Origin $http_origin always;
-#            add_header Access-Control-Allow-Methods GET,POST,HEAD,DELETE,PUT,OPTIONS always;
-#            add_header Access-Control-Allow-Headers authorization,chrome-proxy,range always;
-#            return 204;
-#        }
 
         {% if location.http_basic_authentication is defined %}
             {% if location.http_basic_authentication.allowed_networks is defined and location.http_basic_authentication.allowed_networks %}
