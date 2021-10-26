@@ -2,6 +2,7 @@
 - name: Install system packages
   apt:
     name:
+      - apache2-utils
       - nginx
       - python3-passlib
     state: latest
