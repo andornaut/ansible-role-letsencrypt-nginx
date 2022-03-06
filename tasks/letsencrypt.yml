@@ -46,42 +46,69 @@
     commonName: "{{ item.domain }}"
   loop: "{{ letsencryptnginx_websites }}"
   register: create_csrs
-  when: item.use_snakeoil_certificate is not defined or not item.use_snakeoil_certificate
+  when: not item.use_snakeoil_certificate|default(False)
   become: true
 
-- name: Initiate Letsencrypt challenge
+- name: Initiate Letsencrypt DNS or HTTP challenge
   community.crypto.acme_certificate:
     account_email: "{{ letsencryptnginx_account_email }}"
     account_key_src: "{{ letsencryptnginx_account_key_path }}"
     acme_directory: "{{ letsencryptnginx_acme_directory_url }}"
     acme_version: 2
+    challenge: "{% if item.cloudflare_api_token|default(False) %}dns-01{% else %}http-01{% endif %}"
     csr: "{{ letsencryptnginx_csr_directory }}/{{ item.domain }}.csr"
     fullchain_dest: "{{ letsencryptnginx_crt_directory }}/{{ item.domain }}.crt"
     remaining_days: "{{ letsencryptnginx_remaining_days }}"
     terms_agreed: yes
   loop: "{{ letsencryptnginx_websites }}"
   register: letsencrypt_challenge
-  when: item.use_snakeoil_certificate is not defined or not item.use_snakeoil_certificate
+  when:
+    - item is not skipped
+    - not item.use_snakeoil_certificate|default(False)
   become: true
 
-- name: Create challenge resource directories
+- name: Create DNS challenge TXT record
+  community.general.cloudflare_dns:
+    api_token: "{{ item.item.cloudflare_api_token }}"
+    record: "{{ item['challenge_data'][ item.item.domain ]['dns-01'].record }}"
+    solo: yes
+    type: TXT
+    value: "{{ item['challenge_data'][ item.item.domain ]['dns-01'].resource_value }}"
+    zone: "{{ item.item.cloudflare_api_zone }}"
+  loop: "{{ letsencrypt_challenge.results }}"
+  when:
+    - item is not skipped
+    - item.changed|default(False)
+    - item.item.cloudflare_api_token|default(False)
+    - not item.item.use_snakeoil_certificate|default(False)
+  become: true
+
+- name: Pause for a few seconds to allow DNS to propagate, which may not be applicable
+  pause:
+    seconds: 5
+
+- name: Create HTTP challenge resource directories
   file:
     path: "{{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}/{{ item['challenge_data'][ item.item.domain ]['http-01']['resource']|dirname }}"
     state: directory
   loop: "{{ letsencrypt_challenge.results }}"
   when:
-    - item.changed
     - item is not skipped
+    - item.changed|default(False)
+    - not item.item.cloudflare_api_token|default(False)
+    - not item.item.use_snakeoil_certificate|default(False)
   become: true
 
-- name: Copy challenge resources
+- name: Copy HTTP challenge resources
   copy:
     dest: "{{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}/{{ item['challenge_data'][ item.item.domain ]['http-01']['resource'] }}"
     content: "{{ item['challenge_data'][ item.item.domain ]['http-01']['resource_value'] }}"
   loop: "{{ letsencrypt_challenge.results }}"
   when:
-    - item.changed
     - item is not skipped
+    - item.changed|default(False)
+    - not item.item.cloudflare_api_token|default(False)
+    - not item.item.use_snakeoil_certificate|default(False)
   become: true
 
 - name: Complete Letsencrypt challenge
@@ -90,6 +117,7 @@
     account_key_src: "{{ letsencryptnginx_account_key_path }}"
     acme_directory: "{{ letsencryptnginx_acme_directory_url }}"
     acme_version: 2
+    challenge: "{% if item.item.cloudflare_api_token|default(False) %}dns-01{% else %}http-01{% endif %}"
     csr: "{{ letsencryptnginx_csr_directory }}/{{ item.item.domain }}.csr"
     data: "{{ item }}"
     fullchain_dest: "{{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt"
@@ -98,6 +126,7 @@
   loop: "{{ letsencrypt_challenge.results }}"
   register: issue_certificates
   when:
-    - item.changed
     - item is not skipped
+    - item.changed|default(False)
+    - not item.item.use_snakeoil_certificate|default(False)
   become: true
