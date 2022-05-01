@@ -52,11 +52,14 @@
   git:
     repo: "{{ item.repo }}"
     dest: "{{ letsencryptnginx_web_root_directory }}/{{ item.domain }}"
+    depth: 1
+    force: yes
     version: "{{ item.version|default('HEAD') }}"
   loop: "{{ letsencryptnginx_websites }}"
   register: git_clone
   when: item.repo is defined
   become: true
+  become_user: www-data
 
 - name: Run website commands
   shell: "{{ item.item.command }}"
