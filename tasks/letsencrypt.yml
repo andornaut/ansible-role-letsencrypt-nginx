@@ -129,4 +129,5 @@
     - item is not skipped
     - item.changed|default(False)
     - not item.item.use_snakeoil_certificate|default(False)
+  notify: restart nginx
   become: true
