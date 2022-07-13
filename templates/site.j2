@@ -13,7 +13,9 @@ server {
 {% endif %}
     }
 
-    location /.well-known {
+    # Use regex match location to prevent the dotfile deny rule in the common snippet from taking precedence.
+    # https://serverfault.com/a/935270
+    location ^~ /.well-known {
         root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }};
         access_log on;
         error_log on;
@@ -118,6 +120,16 @@ server {
     {% else %}
         ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt;
         ssl_certificate_key {{ letsencryptnginx_private_key_path }};
+
+        # Use regex match location to prevent the dotfile deny rule in the common snippet from taking precedence.
+        # https://serverfault.com/a/935270
+        location ^~ /.well-known {
+            root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }};
+            access_log on;
+            error_log on;
+            log_not_found on;
+            allow all; # Override ../snippets/common_site_configuration
+        }
     {% endif %}
     include snippets/common_site_configuration;
 }
