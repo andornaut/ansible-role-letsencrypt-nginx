@@ -5,6 +5,7 @@
       - apache2-utils
       - nginx
       - python3-passlib
+      - ssl-cert
     state: latest
     update_cache: yes
   become: true
