@@ -1,16 +1,5 @@
 ---
-- name: Install system packages
-  apt:
-    name:
-      - apache2-utils
-      - nginx
-      - python3-passlib
-      - ssl-cert
-    state: latest
-    update_cache: yes
-  become: true
-
-- name: Create HTTP Basic Authentication accounts
+- name: Configure HTTP Basic Authentication
   htpasswd:
     path: /etc/nginx/{{ item.0.domain }}.htpasswd
     name: "{{ item.1.username }}"
@@ -25,7 +14,7 @@
     - skip_missing: True
   become: true
 
-- name: Create HTTP Basic Authentication accounts for aliases
+- name: Configure HTTP Basic Authentication for aliases
   htpasswd:
     path: /etc/nginx/{{ item.0.password_filename }}
     name: "{{ item.1.username }}"
@@ -40,62 +29,13 @@
     - skip_missing: True
   become: true
 
-- name: Create letsencryptnginx_web_root_directory
-  file:
-    path: "{{ letsencryptnginx_web_root_directory }}"
-    state: directory
-    owner: www-data
-    group: www-data
-    mode: 2775
-  become: true
-
-- name: Clone website repositories
-  git:
-    repo: "{{ item.repo }}"
-    dest: "{{ letsencryptnginx_web_root_directory }}/{{ item.domain }}"
-    depth: 1
-    force: yes
-    version: "{{ item.version|default('HEAD') }}"
-  loop: "{{ letsencryptnginx_websites }}"
-  register: git_clone
-  when: item.repo is defined
-  become: true
-  become_user: www-data
-
-- name: Run website commands
-  shell: "{{ item.item.command }}"
-  args:
-    chdir: "{{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}"
-  loop: "{{ git_clone.results }}"
-  when:
-    - item.changed and 'command' in item.item
-    - item is not skipped
-  become: true
-
-- name: Chown repo directrories
-  file:
-    path: "{{ letsencryptnginx_web_root_directory }}/{{ item.domain }}"
-    owner: www-data
-    group: www-data
-  loop: "{{ letsencryptnginx_websites }}"
-  when: item.repo is defined
-  become: true
-
-- name: Create website web_root directories
-  file:
-    path: "{{ letsencryptnginx_web_root_directory }}/{{ item.domain }}"
-    owner: www-data
-    group: www-data
-    state: directory
-  loop: "{{ letsencryptnginx_websites }}"
-  when: item.repo is not defined and item.proxy_port is not defined
-  become: true
-
-- name: Delete sites-available and sites-enabled directories
+# Will always cause changes
+- name: Delete outdated files and directories
   file:
     path: "{{ item }}"
     state: absent
   loop:
+    - /etc/nginx/proxy-params
     - /etc/nginx/sites-available
     - /etc/nginx/sites-enabled
   become: true
@@ -104,6 +44,13 @@
   file:
     path: /etc/nginx/sites-enabled
     state: directory
+  become: true
+
+- name: Copy default site config
+  copy:
+    src: 00-default
+    dest: /etc/nginx/sites-enabled
+  notify: restart nginx
   become: true
 
 - name: Copy snippets
@@ -116,31 +63,10 @@
   notify: restart nginx
   become: true
 
-- name: Overwrite proxy_params
-  copy:
-    src: proxy_params
-    dest: /etc/nginx/
-  notify: restart nginx
-  become: true
-
-- name: Copy default site config
-  copy:
-    src: 00-default
-    dest: /etc/nginx/sites-enabled
-  notify: restart nginx
-  become: true
-
-- name: Check if HTTPS certificates are present
-  stat:
-    path: "{{ letsencryptnginx_crt_directory }}/{{ item.domain }}.crt"
-  loop: "{{ letsencryptnginx_websites }}"
-  register: certificates
-  become: true
-
 - name: Copy site configs
   template:
     src: site.j2
-    dest: /etc/nginx/sites-enabled/{{ item.item.domain }}
-  loop: "{{ certificates.results }}"
+    dest: /etc/nginx/sites-enabled/{{ item['domain'] }}
+  loop: "{{ letsencryptnginx_websites }}"
   notify: restart nginx
   become: true

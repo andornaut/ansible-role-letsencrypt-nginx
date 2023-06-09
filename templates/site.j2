@@ -1,22 +1,18 @@
 server {
     listen 80;
-    server_name {{ item.item.domain }} www.{{ item.item.domain }};
+    server_name {{ item.domain }} www.{{ item.domain }};
     access_log off;
     error_log off;
     log_not_found off;
 
     location / {
-{% if item.stat.exists or (item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate) %}
-        rewrite ^/(.*) https://{{ item.item.domain }}/$1 permanent;
-{% else %}
-        return 404;
-{% endif %}
+        rewrite ^/(.*) https://{{ item.domain }}/$1 permanent;
     }
 
     # Use regex match location to prevent the dotfile deny rule in the common snippet from taking precedence.
     # https://serverfault.com/a/935270
     location ^~ /.well-known {
-        root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }};
+        root {{ letsencryptnginx_web_root_directory }}/{{ item.domain }};
         access_log on;
         error_log on;
         log_not_found on;
@@ -24,69 +20,86 @@ server {
     }
 }
 
-{% if item.stat.exists or (item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate) %}
 server {
     listen 443 ssl;
-    server_name www.{{ item.item.domain }};
-    rewrite ^/(.*) https://{{ item.item.domain }}/$1 permanent;
+    server_name www.{{ item.domain }};
+    rewrite ^/(.*) https://{{ item.domain }}/$1 permanent;
     access_log off;
     error_log off;
+    log_not_found off;
 
-{% if item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate %}
+{% if item.use_snakeoil_certificate|default(False) %}
     include snippets/snakeoil.conf;
 {% else %}
-    ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt;
+    ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.csr_common_name|default(item.domain)|replace('*', '_') }}.crt;
     ssl_certificate_key {{ letsencryptnginx_private_key_path }};
 {% endif %}
 }
 
 server {
     listen 443 ssl;
-    server_name {{ item.item.domain }};
+    server_name {{ item.domain }};
 
-{% if item.item.http_basic_authentication is defined %}
-    {% if item.item.http_basic_authentication.allowed_networks is defined and item.item.http_basic_authentication.allowed_networks %}
-        satisfy any;
-        {% for allowed_network in item.item.http_basic_authentication.allowed_networks %}
-        allow {{ allowed_network }};
-        {% endfor %}
-        deny all;
-    {% endif %}
+{% if item.use_snakeoil_certificate|default(False) %}
+    include snippets/snakeoil.conf;
+{% else %}
+    ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.csr_common_name|default(item.domain)|replace('*', '_') }}.crt;
+    ssl_certificate_key {{ letsencryptnginx_private_key_path }};
+
+    # Use regex match location to prevent the dotfile deny rule in the common snippet from taking precedence.
+    # https://serverfault.com/a/935270
+    location ^~ /.well-known {
+        root {{ letsencryptnginx_web_root_directory }}/{{ item.domain }};
+        access_log on;
+        error_log on;
+        log_not_found on;
+        allow all; # Override ../snippets/common_site_configuration
+    }
+{% endif %}
+
+{% if item.http_basic_authentication is defined %}
+{% if item.http_basic_authentication.allowed_networks is defined %}
+    satisfy any;
+{% for allowed_network in item.http_basic_authentication.allowed_networks %}
+    allow {{ allowed_network }};
+{% endfor %}
+    deny all;
+{% endif %}
     auth_basic "Restricted Content";
-    auth_basic_user_file /etc/nginx/{{ item.item.domain }}.htpasswd;
+    auth_basic_user_file /etc/nginx/{{ item.domain }}.htpasswd;
 {% endif %}
 
     location / {
-{% if item.item.proxy_port is defined %}
+{% if item.proxy_port is defined %}
         include /etc/nginx/proxy_params;
-    {% if item.item.remove_authorization_header is defined and item.item.remove_authorization_header %}
+{% if item.proxy_remove_authorization_header|default(False) %}
         # The HTTP Basic Auth added by Nginx conflicts with Unifi.
         # https://community.ui.com/questions/UniFi-5-9-29-behind-Apache-reverse-proxy-gives-400-bad-request-/432808a8-9f2d-489c-ba6f-c76d494bb702
         proxy_set_header Authorization "";
-    {% endif %}
-
-    {% if item.item.proxy_https is defined and item.item.proxy_https %}
+{% endif %}
+{% if item.proxy_redirect_http|default(False) %}
         proxy_redirect ~*^http([^s].*)$ https$1;
-        proxy_pass https://127.0.0.1:{{ item.item.proxy_port }};
-    {% else %}
-        proxy_pass http://127.0.0.1:{{ item.item.proxy_port }};
-    {% endif %}
+        proxy_pass https://127.0.0.1:{{ item.proxy_port }};
 {% else %}
-        root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }}{% if item.item.path is defined %}/{{ item.item.path }}{% endif %};
-    {% if item.item.default_path is defined and item.item.default_path %}
-        try_files $uri $uri/ {{ item.item.default_path }};
-    {% endif %}
+        proxy_pass http://127.0.0.1:{{ item.proxy_port }};
+{% endif %}
+{% else %}
+        root {{ letsencryptnginx_web_root_directory }}/{{ item.domain }}{% if item.path is defined %}/{{ item.path }}{% endif %};
+{% if item.default_path is defined and item.default_path %}
+        try_files $uri $uri/ {{ item.default_path }};
+{% endif %}
 {% endif %}
 
-{% if item.item.websocket_enabled is defined and item.item.websocket_enabled %}
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
+{% if item.websocket_enabled|default(False) %}
+        # When `websocket_enabled` is True and `websocket_path` is undefined
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
 {% endif %}
     }
 
-{% if item.item.websocket_path is defined and item.item.websocket_path %}
-    location {{ item.item.websocket_path }} {
-        proxy_pass http://127.0.0.1:{{ item.item.proxy_port }}{{ item.item.websocket_path }};
+{% if item.websocket_path is defined and item.websocket_path %}
+    location {{ item.websocket_path }} {
+        proxy_pass http://127.0.0.1:{{ item.proxy_port }}{{ item.websocket_path }};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -94,43 +107,25 @@ server {
     }
 {% endif %}
 
-{% if item.item.locations is defined and item.item.locations %}
-    {% for location in item.item.locations %}
+{% if item.locations is defined %}
+{% for location in item.locations %}
     location {{ location.src }} {
         alias {{ location.dest }};
         autoindex on;
-
-        {% if location.http_basic_authentication is defined %}
-            {% if location.http_basic_authentication.allowed_networks is defined and location.http_basic_authentication.allowed_networks %}
+{% if location.http_basic_authentication is defined %}
+{% if location.http_basic_authentication.allowed_networks is defined %}
         satisfy any;
-                {% for allowed_network in location.http_basic_authentication.allowed_networks %}
+{% for allowed_network in location.http_basic_authentication.allowed_networks %}
         allow {{ allowed_network }};
-                {% endfor %}
+{% endfor %}
         deny all;
-            {% endif %}
-
+{% endif %}
         auth_basic "Restricted Content";
         auth_basic_user_file /etc/nginx/{{ location.http_basic_authentication.password_filename }};
-        {% endif %}
-    }
-    {% endfor %}
 {% endif %}
-    {% if item.item.use_snakeoil_certificate is defined and item.item.use_snakeoil_certificate %}
-        include snippets/snakeoil.conf;
-    {% else %}
-        ssl_certificate {{ letsencryptnginx_crt_directory }}/{{ item.item.domain }}.crt;
-        ssl_certificate_key {{ letsencryptnginx_private_key_path }};
+    }
+{% endfor %}
+{% endif %}
 
-        # Use regex match location to prevent the dotfile deny rule in the common snippet from taking precedence.
-        # https://serverfault.com/a/935270
-        location ^~ /.well-known {
-            root {{ letsencryptnginx_web_root_directory }}/{{ item.item.domain }};
-            access_log on;
-            error_log on;
-            log_not_found on;
-            allow all; # Override ../snippets/common_site_configuration
-        }
-    {% endif %}
     include snippets/common_site_configuration;
 }
-{% endif %}

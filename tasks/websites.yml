@@ -1,0 +1,34 @@
+---
+- name: Create web_root directories
+  file:
+    path: "{{ letsencryptnginx_web_root_directory }}/{{ item.domain }}"
+    owner: www-data
+    group: www-data
+    mode: 2775
+    state: directory
+  loop: "{{ letsencryptnginx_websites }}"
+  become: true
+
+- name: Clone website repositories
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ letsencryptnginx_web_root_directory }}/{{ item.domain }}"
+    depth: 1
+    force: yes
+    version: "{{ item.version|default('HEAD') }}"
+  loop: "{{ letsencryptnginx_websites }}"
+  register: git_clone
+  when: item.repo is defined
+  become: true
+  become_user: www-data
+
+- name: Run website commands
+  shell: "{{ item.command }}"
+  args:
+    chdir: "{{ letsencryptnginx_web_root_directory }}/{{ item.domain }}"
+  loop: "{{ git_clone.results }}"
+  when:
+    - item.changed and item.command is defined
+    - item is not skipped
+  become: true
+  become_user: www-data
