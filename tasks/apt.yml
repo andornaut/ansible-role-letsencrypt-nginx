@@ -3,7 +3,6 @@
   apt:
     name:
       - apache2-utils
-      - nginx
       - python3-openssl
       - python3-passlib
       - ssl-cert

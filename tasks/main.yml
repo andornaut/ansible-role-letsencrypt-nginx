@@ -3,7 +3,15 @@
 #      var: letsencryptnginx_websites
 
 - import_tasks: apt.yml
-- import_tasks: websites.yml
-- import_tasks: nginx.yml
-- import_tasks: csr.yml
+- import_tasks: www.yml
+- import_tasks: basicauth.yml
+- import_tasks: ssl.yml
+- import_tasks: configuration.yml
+
+#  Run Nginx, so that Let's Encrypt HTTP certificate validation can occur
+- import_tasks: docker.yml
 - import_tasks: letsencrypt.yml
+
+# Restart Nginx with new certificates
+- import_tasks: configuration.yml
+- import_tasks: docker.yml

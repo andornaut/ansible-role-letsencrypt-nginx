@@ -1,0 +1,22 @@
+---
+- name: Start Nginx Docker container
+  vars:
+    volumes:
+      - "{{ letsencryptnginx_docker_volumes.config }}:/etc/nginx/conf.d:ro"
+      - "{{ letsencryptnginx_docker_volumes.localtime }}:/etc/localtime:ro"
+      - "{{ letsencryptnginx_docker_volumes.www }}:/var/www:ro"
+      - /var/cache/nginx
+      - /var/run
+  docker_compose:
+    project_name: nginx
+    pull: yes
+    recreate: always
+    definition:
+      version: "3.9" # "group_add" works in v2.4 or v3.9
+      services:
+        nginx:
+          container_name: nginx
+          image: "{{ letsencryptnginx_docker_image }}"
+          network_mode: host
+          restart: on-failure:5
+          volumes: "{{ volumes }}"

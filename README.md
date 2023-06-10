@@ -1,13 +1,12 @@
 # ansible-role-letsencrypt-nginx
 
-An [Ansible](https://www.ansible.com/) role that provisions [NGINX HTTP server](https://www.nginx.com)
-on Ubuntu and manages auto-renewal of HTTPS certificates using
+An [Ansible](https://www.ansible.com/) role to provision an [NGINX HTTP server](https://www.nginx.com) as a
+[Docker container](https://hub.docker.com/_/nginx) on Ubuntu and manage auto-renewal of HTTPS certificates using
 [Let's Encrypt](https://letsencrypt.org/).
 
 ## Requirements
 
 * [Ansible](https://www.ansible.com/) >= 2.9.0
-* community.crypto collection: `ansible-galaxy collection install community.crypto`
 
 ## Variables
 
@@ -24,9 +23,9 @@ letsencryptnginx_account_email: info@example.com
 letsencryptnginx_acme_directory_url: https://acme-v02.api.letsencrypt.org/directory
 
 letsencryptnginx_websites:
-  # Return 404
+  # Returns HTTP response code 404
   - domain: subdomain.example.com
-    use_snakeoil_certificate: true
+    use_selfsigned_certificate: true
 
   - domain: example.com
     repo: https://github.com/andornaut/example.com.git
