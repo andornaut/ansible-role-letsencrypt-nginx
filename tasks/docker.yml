@@ -12,11 +12,11 @@
     pull: yes
     recreate: always
     definition:
-      version: "3.9" # "group_add" works in v2.4 or v3.9
+      version: "3.9"
       services:
         nginx:
           container_name: nginx
           image: "{{ letsencryptnginx_docker_image }}"
           network_mode: host
-          restart: on-failure:5
+          restart: unless-stopped
           volumes: "{{ volumes }}"
