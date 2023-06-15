@@ -1,10 +1,10 @@
 ---
 - name: Start Nginx Docker container
   vars:
-    volumes:
-      - "{{ letsencryptnginx_docker_volumes.config }}:/etc/nginx/conf.d:ro"
-      - "{{ letsencryptnginx_docker_volumes.localtime }}:/etc/localtime:ro"
-      - "{{ letsencryptnginx_docker_volumes.www }}:/var/www:ro"
+    required_volumes:
+      - "{{ letsencryptnginx_docker_required_volumes.config }}:/etc/nginx/conf.d:ro"
+      - "{{ letsencryptnginx_docker_required_volumes.localtime }}:/etc/localtime:ro"
+      - "{{ letsencryptnginx_docker_required_volumes.www }}:/var/www:ro"
       - /var/cache/nginx
       - /var/run
   docker_compose:
@@ -19,4 +19,4 @@
           image: "{{ letsencryptnginx_docker_image }}"
           network_mode: host
           restart: unless-stopped
-          volumes: "{{ volumes }}"
+          volumes: "{{ required_volumes + letsencryptnginx_docker_extra_volumes }}"
