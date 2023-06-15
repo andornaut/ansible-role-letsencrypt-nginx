@@ -12,7 +12,7 @@ An [Ansible](https://www.ansible.com/) role to provision an [NGINX HTTP server](
 
 See [default values](./defaults/main.yml).
 
-### Example configuration
+## Example configuration
 
 Be sure to set `letsencryptnginx_acme_directory_url` for production use.
 
@@ -50,3 +50,30 @@ letsencryptnginx_websites:
     proxy_remove_authorization_header: False
     websocket_path: /api/websocket
 ```
+
+## Troubleshooting
+
+### Restart Nginx after a folder is mounted
+
+1. Create a Systemd unit file
+   ```
+   sudo systemctl edit --force --full restart-nginx-after-nas.service
+   ```
+1. Enter the following:
+   ```
+   [Unit]
+   Description=Restart the Nginx Docker container after /media/nas has been mounted
+   Requires=media-nas.mount
+   After=media-nas.mount
+
+   [Service]
+   Type=oneshot
+   ExecStartPre=sleep 30
+   ExecStart=docker restart nginx
+   RemainAfterExit=true
+
+   [Install]
+   WantedBy=media-nas.mount
+   ```
+1. Run `sudo systemctl daemon-reload`
+1. Run `sudo systemctl restart restart-nginx-after-nas.service`
