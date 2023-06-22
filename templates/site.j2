@@ -21,7 +21,7 @@ server {
 }
 
 server {
-    listen 443 ssl;
+    listen 443 ssl http2;
     server_name www.{{ item.item.domain }};
     rewrite ^/(.*) https://{{ item.item.domain }}/$1 permanent;
     access_log off;
@@ -37,7 +37,7 @@ server {
 }
 
 server {
-    listen 443 ssl;
+    listen 443 ssl http2;
     server_name {{ item.item.domain }};
 
 {% if item.item.http_basic_authentication is defined %}
@@ -91,19 +91,28 @@ server {
 {% endif %}
 
 {% if item.item.websocket_enabled|default(False) %}
-        # When `websocket_enabled` is True and `websocket_path` is undefined
+        # When `websocket_enabled` is True
+        proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
+
+        proxy_connect_timeout 4s;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 12s;
 {% endif %}
     }
 
 {% if item.item.websocket_path is defined and item.item.websocket_path %}
     location {{ item.item.websocket_path }} {
+        # When `websocket_path` is truthy
         proxy_pass http://127.0.0.1:{{ item.item.proxy_port }}{{ item.item.websocket_path }};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_read_timeout 86400;
+
+        proxy_connect_timeout 4s;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 12s;
     }
 {% endif %}
 
