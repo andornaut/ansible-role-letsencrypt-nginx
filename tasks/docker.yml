@@ -20,3 +20,4 @@
           network_mode: host
           restart: unless-stopped
           volumes: "{{ required_volumes + letsencryptnginx_docker_extra_volumes }}"
+  become: true
